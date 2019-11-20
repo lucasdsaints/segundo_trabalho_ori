@@ -13,7 +13,7 @@ def main():
     lista_bases = arq_bases.read().split("\n")
     arq_bases.close()
 
-    indice_invertido = geraIndiceInvertido(lista_bases)
+    indice_invertido = gera_indice_invertido(lista_bases)
     
     # gera e grava tabela de ponderação
     tabela_poderacao = gera_tabela_ponderacao(lista_bases, indice_invertido)
@@ -36,7 +36,6 @@ def grava_resuldado(similaridade, lista_bases):
         if doc[1] != 0:
             n_resultados += 1
             texto += f"{lista_bases[doc[0] -1]} - {doc[1]:.4f}\n"
-    # print(f"{n_resultados}\n{texto}")
     arq_resultado = open("resposta.txt", "w")
     arq_resultado.write(f"{n_resultados}\n{texto}")
     arq_resultado.close()
@@ -56,18 +55,21 @@ def calcula_similaridade(bases, consulta, termos_da_base):
                 somatorio2 += bases[base][termo]**2
             if termo in consulta:
                 somatorio3 += consulta[termo]**2
-        similaridade[n_base] = somatorio1 / (sqrt(somatorio2) * sqrt(somatorio3))
+        similaridade[n_base] = 0 if ((sqrt(somatorio2) * sqrt(somatorio3)) == 0) else somatorio1 / (sqrt(somatorio2) * sqrt(somatorio3))
     return similaridade
 
 def gera_ponderacao_pesquisa (consulta, n_docs, indice_invertido):
-    consulta = limparTexto(consulta)
-    consulta = extrairRadicais(consulta)
+    consulta = limpar_texto(consulta)
+    consulta = extrair_radicais(consulta)
 
     ponderacao = {}
     for termo in consulta:
-        tf = 1 + log(consulta.count(termo), 10)
-        idf = log(n_docs/len(indice_invertido[termo])) # essa parte aqui é arriscado, o melhor seria uma outra func com bloco try catch
-        ponderacao[termo] = tf * idf
+        if termo in indice_invertido:
+            tf = 1 + log(consulta.count(termo), 10)
+            idf = log(n_docs/len(indice_invertido[termo]))
+            ponderacao[termo] = tf * idf
+        else:
+            ponderacao[termo] = 0
     return ponderacao
 
 def gera_tabela_ponderacao (lista_bases, indice_invertido):
@@ -77,8 +79,8 @@ def gera_tabela_ponderacao (lista_bases, indice_invertido):
     for base in lista_bases:
         doc += 1
         texto = open(base, "r").read()
-        vetor_palavras = limparTexto(texto)
-        vetor_radicais = extrairRadicais(vetor_palavras)
+        vetor_palavras = limpar_texto(texto)
+        vetor_radicais = extrair_radicais(vetor_palavras)
 
         ponderacao_doc = {}
         for radical in vetor_radicais:
@@ -104,15 +106,15 @@ def gravar_tabela_ponderacao (lista_bases, tabela_poderacao):
         arq_ponderacao.write(texto)
     arq_ponderacao.close()
 
-def geraIndiceInvertido (lista_bases):
+def gera_indice_invertido (lista_bases):
     # gerar indice
     i = 0
     indice_invertido = {}
     for base in lista_bases:
         i += 1
         texto = open(base, "r").read()
-        vetor_palavras = limparTexto(texto)
-        vetor_radicais = extrairRadicais(vetor_palavras)
+        vetor_palavras = limpar_texto(texto)
+        vetor_radicais = extrair_radicais(vetor_palavras)
 
         for radical in vetor_radicais:
             if radical not in indice_invertido:
@@ -138,7 +140,7 @@ def geraIndiceInvertido (lista_bases):
     # retorno do indice
     return indice_invertido
 
-def limparTexto (str):
+def limpar_texto (str):
     str = str.lower()
     str =  str.replace("\n", " ")
     str = str.replace(',', " ")
@@ -156,7 +158,7 @@ def limparTexto (str):
 
     return vetor_palavras_limpo
 
-def extrairRadicais (objeto):
+def extrair_radicais (objeto):
 	stemmer = nltk.stem.RSLPStemmer()
 
 	# se o objeto for só uma palavra
